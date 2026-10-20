@@ -49,7 +49,7 @@ Da Safari/Chrome usa "Aggiungi a schermata Home" per averla come un'app.
 
 Tutti gratuiti e senza chiave, chiamati direttamente dal browser:
 
-- Mappa: tile CARTO su dati OpenStreetMap
+- Mappa: OpenStreetMap (tile standard di tile.openstreetmap.org)
 - Ricerca luoghi: Nominatim (max 1 richiesta al secondo), Photon come riserva
 - Percorsi e matrice dei tempi: Valhalla (valhalla1.openstreetmap.de), OSRM (routing.openstreetmap.de) come riserva
 - OCR: Tesseract.js (il modello di lingua ita+eng si scarica la prima volta)

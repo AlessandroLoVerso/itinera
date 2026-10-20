@@ -65,18 +65,11 @@ function load() {
 const map = L.map("map", { zoomControl: true, attributionControl: true }).setView([41.9, 12.49], 13);
 map.zoomControl.setPosition("bottomright");
 const dark = matchMedia("(prefers-color-scheme: dark)");
-let tiles;
-function setTiles() {
-  if (tiles) tiles.remove();
-  const style = dark.matches ? "dark_all" : "rastertiles/voyager";
-  tiles = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`, {
-    maxZoom: 20,
-    subdomains: "abcd",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-  }).addTo(map);
-}
-setTiles();
-dark.addEventListener?.("change", setTiles);
+// Mappa standard OpenStreetMap; nel tema scuro la scuriamo via CSS (OSM non ha uno stile scuro)
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(map);
 
 const markerLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
