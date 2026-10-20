@@ -6,7 +6,8 @@ const VALHALLA = "https://valhalla1.openstreetmap.de";
 const OSRM = "https://routing.openstreetmap.de";
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 const PHOTON = "https://photon.komoot.io/api/";
-const STORE_KEY = "itinera:v1";
+const STORE_KEY = "itinera:v2";
+const PALERMO = [38.1157, 13.3615];
 const VALHALLA_MAX_ROUTE = 20; // tappe per richiesta /route sul server pubblico
 
 const MODES = {
@@ -17,15 +18,15 @@ const MODES = {
 };
 
 const SAMPLE = {
-  area: "Roma",
+  area: "Palermo",
   stops: [
-    ["Colosseo", 41.8902, 12.4922],
-    ["Fontana di Trevi", 41.9009, 12.4833],
-    ["Pantheon", 41.8986, 12.4769],
-    ["Piazza Navona", 41.8992, 12.4731],
-    ["Campo de' Fiori", 41.8956, 12.4722],
-    ["Santa Maria in Trastevere", 41.8894, 12.4703],
-    ["Bocca della Verità", 41.8881, 12.4815],
+    ["Teatro Massimo", 38.1203, 13.3571],
+    ["Quattro Canti", 38.1157, 13.3617],
+    ["Fontana Pretoria", 38.1149, 13.3626],
+    ["Cattedrale di Palermo", 38.1143, 13.3561],
+    ["Palazzo dei Normanni", 38.1110, 13.3534],
+    ["Mercato di Ballarò", 38.1117, 13.3594],
+    ["Foro Italico", 38.1176, 13.3730],
   ],
 };
 
@@ -39,7 +40,7 @@ const state = {
   stops: [], // {id, query, lat, lon, status: pending|ok|missing, detail}
   mode: "auto",
   moto: "veloce",
-  area: "",
+  area: "Palermo",
   start: "first",
   end: "free",
   optimize: true,
@@ -62,9 +63,12 @@ function load() {
 
 /* ---------- Mappa ---------- */
 
-const map = L.map("map", { zoomControl: true, attributionControl: true }).setView([41.9, 12.49], 13);
+const map = L.map("map", { zoomControl: true, attributionControl: true }).setView(PALERMO, 14);
 map.zoomControl.setPosition("bottomright");
 const dark = matchMedia("(prefers-color-scheme: dark)");
+// Stessa condizione del CSS per il pannello laterale (desktop e telefono in orizzontale)
+const sidePanel = matchMedia("(min-width: 900px), (orientation: landscape) and (max-height: 560px)");
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 // Mappa standard OpenStreetMap; nel tema scuro la scuriamo via CSS (OSM non ha uno stile scuro)
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
@@ -79,13 +83,13 @@ function modeColor() {
   return getComputedStyle(document.body).getPropertyValue("--mode").trim() || "#2c5cff";
 }
 
-function pinIcon(label, cls = "") {
+function pinIcon(label, cls = "", delay = 0) {
   return L.divIcon({
     className: "",
-    html: `<div class="pin-marker ${cls}"><span>${label}</span></div>`,
-    iconSize: [30, 30],
-    iconAnchor: [4, 30],
-    popupAnchor: [11, -28],
+    html: `<div class="pin-wrap ${cls}" style="--d:${delay}s"><div class="pin-marker ${cls}"><span>${label}</span></div></div>`,
+    iconSize: [34, 34],
+    iconAnchor: [5, 34],
+    popupAnchor: [12, -32],
   });
 }
 
@@ -99,7 +103,7 @@ function renderMarkers() {
     const n = route && orderOf.has(s.id) ? orderOf.get(s.id) : i + 1;
     const isStart = route && n === 0;
     const m = L.marker([s.lat, s.lon], {
-      icon: pinIcon(isStart ? "A" : n, isStart ? "start" : route ? "" : "pending"),
+      icon: pinIcon(isStart ? "A" : n, isStart ? "start" : route ? "" : "pending", Math.min(n, 12) * 0.06),
       draggable: true,
       title: s.query,
     })
@@ -117,10 +121,10 @@ function renderMarkers() {
 
 function fitTo(latlngs) {
   if (!latlngs.length) return;
-  const wide = innerWidth >= 900;
-  const sheetH = $("#sheet").getBoundingClientRect().height;
-  const opts = wide
-    ? { paddingTopLeft: [450, 80], paddingBottomRight: [40, 40], maxZoom: 16 }
+  const box = $("#sheet").getBoundingClientRect();
+  const sheetH = box.height;
+  const opts = sidePanel.matches
+    ? { paddingTopLeft: [box.right + 30, 80], paddingBottomRight: [40, 40], maxZoom: 16 }
     : { paddingTopLeft: [30, 80], paddingBottomRight: [30, sheetH + 20], maxZoom: 16 };
   map.fitBounds(L.latLngBounds(latlngs), opts);
 }
@@ -195,6 +199,7 @@ function invalidateRoute() {
   route = null;
   routeLayer.clearLayers();
   $("#result").hidden = true;
+  $("#peek").hidden = true;
 }
 
 /* ---------- Messaggi ---------- */
@@ -613,7 +618,7 @@ async function computeRoute() {
     drawRoute();
     renderResult();
     if (skipped) toast(`${skipped} tappe non trovate sono state escluse dal percorso.`);
-    if (innerWidth < 900) $("#sheet").dataset.state = "half";
+    if (!sidePanel.matches) $("#sheet").dataset.state = "half";
     $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
     fitTo(route.coords);
   } catch (err) {
@@ -632,15 +637,37 @@ function drawRoute() {
   if (!route) return;
   const color = modeColor();
   const dash = state.mode === "piedi" ? "2 9" : state.mode === "bici" ? "10 8" : null;
-  L.polyline(route.coords, { color: dark.matches ? "#0b0d12" : "#ffffff", weight: 10, opacity: 0.9, lineCap: "round", lineJoin: "round" }).addTo(routeLayer);
-  L.polyline(route.coords, { color, weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: dash }).addTo(routeLayer);
+  const casing = dark.matches ? "#0b0d12" : "#ffffff";
+  L.polyline(route.coords, { color: color, weight: 18, opacity: 0.14, lineCap: "round", lineJoin: "round", interactive: false }).addTo(routeLayer);
+  L.polyline(route.coords, { color: casing, weight: 10, opacity: 0.95, lineCap: "round", lineJoin: "round", interactive: false }).addTo(routeLayer);
+  const main = L.polyline(route.coords, { color, weight: 6, opacity: 1, lineCap: "round", lineJoin: "round", dashArray: dash, interactive: false }).addTo(routeLayer);
+  if (!dash)
+    L.polyline(route.coords, { color: "#ffffff", weight: 2, opacity: 0.75, dashArray: "2 14", lineCap: "round", className: "route-flow", interactive: false }).addTo(routeLayer);
+  animateDraw(main.getElement(), dash);
   renderMarkers();
+}
+
+// La linea del percorso "si disegna" dalla partenza all'arrivo
+function animateDraw(el, dash) {
+  if (!el || reducedMotion.matches) return;
+  el.setAttribute("pathLength", "1000");
+  el.style.strokeDasharray = "1000";
+  el.style.strokeDashoffset = "1000";
+  el.getBoundingClientRect();
+  el.style.transition = "stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)";
+  el.style.strokeDashoffset = "0";
+  setTimeout(() => {
+    el.removeAttribute("pathLength");
+    el.style.transition = el.style.strokeDasharray = el.style.strokeDashoffset = "";
+    if (dash) el.setAttribute("stroke-dasharray", dash);
+  }, 1250);
 }
 
 /* ---------- Risultato ---------- */
 
 function fmtTime(sec) {
   const m = Math.round(sec / 60);
+  if (m < 1) return "<1 min";
   if (m < 60) return `${m} min`;
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}`;
 }
@@ -657,19 +684,18 @@ function gmapsUrl(points) {
   return u.toString();
 }
 
+function renderPeek(km, sec) {
+  $("#pk-icon").innerHTML = document.querySelector(`.mode[data-mode="${state.mode}"] svg`).outerHTML;
+  $("#pk-time").textContent = fmtTime(sec);
+  const stops = new Set(route.points.filter((p) => p.stopId).map((p) => p.stopId)).size;
+  $("#pk-meta").textContent = `${km.toFixed(1).replace(".", ",")} km · ${stops} tappe · ${MODES[state.mode].label}`;
+  $("#pk-go").href = gmapsUrl(route.points.slice(0, 11));
+  $("#peek").hidden = false;
+}
+
 function renderResult() {
   const totKm = route.legs.reduce((a, l) => a + l.km, 0);
   const totSec = route.legs.reduce((a, l) => a + l.sec, 0);
-  $("#sum-dist").textContent = totKm < 10 ? totKm.toFixed(1).replace(".", ",") : Math.round(totKm);
-  const m = Math.round(totSec / 60);
-  if (m < 60) {
-    $("#sum-time").textContent = m;
-    $("#sum-time-unit").textContent = "minuti";
-  } else {
-    $("#sum-time").textContent = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
-    $("#sum-time-unit").textContent = "ore";
-  }
-  $("#sum-stops").textContent = new Set(route.points.filter((p) => p.stopId).map((p) => p.stopId)).size;
 
   const legs = $("#legs");
   legs.innerHTML = "";
@@ -707,6 +733,7 @@ function renderResult() {
     state.mode === "moto" ? ` · ${state.moto}` : ""
   }. I tempi non includono soste e traffico in tempo reale.`;
   $("#result").hidden = false;
+  renderPeek(totKm, totSec);
 }
 
 function exportGPX() {
@@ -806,6 +833,7 @@ $("#add-input").addEventListener("paste", (e) => {
 
 $("#area").addEventListener("change", (e) => {
   state.area = e.target.value.trim();
+  $("#brand-area").textContent = state.area;
   // con una zona nuova rifaccio le ricerche non riuscite
   state.stops.forEach((s) => s.status === "missing" && Object.assign(s, { status: "pending" }));
   save();
@@ -826,7 +854,8 @@ $("#btn-clear").addEventListener("click", () => {
 $("#btn-sample").addEventListener("click", () => {
   state.area = SAMPLE.area;
   $("#area").value = SAMPLE.area;
-  state.stops = SAMPLE.stops.map(([q, lat, lon]) => ({ id: uid(), query: q, lat, lon, status: "ok", detail: `${q}, Roma` }));
+  $("#brand-area").textContent = SAMPLE.area;
+  state.stops = SAMPLE.stops.map(([q, lat, lon]) => ({ id: uid(), query: q, lat, lon, status: "ok", detail: `${q}, Palermo` }));
   invalidateRoute();
   save();
   renderStops();
@@ -842,24 +871,62 @@ $("#btn-locate").addEventListener("click", async () => {
   }
 });
 
-// Pannello trascinabile (telefono)
+// Pannello trascinabile (telefono): segue il dito e si aggancia a peek / metà / pieno
 const sheet = $("#sheet");
 const STATES = ["peek", "half", "full"];
-let dragY = null;
-$("#grabber").addEventListener("pointerdown", (e) => {
-  dragY = e.clientY;
-  e.target.setPointerCapture?.(e.pointerId);
-});
-$("#grabber").addEventListener("pointerup", (e) => {
-  if (dragY == null) return;
-  const dy = e.clientY - dragY;
-  dragY = null;
-  let i = STATES.indexOf(sheet.dataset.state);
-  if (Math.abs(dy) < 8) i = i === 2 ? 1 : i + 1; // tocco: espandi a giro
-  else i = Math.max(0, Math.min(2, i + (dy < 0 ? 1 : -1)));
-  sheet.dataset.state = STATES[i];
-  setTimeout(() => map.invalidateSize(), 350);
-});
+let drag = null;
+function onDragStart(e) {
+  if (sidePanel.matches || e.target.closest("a")) return;
+  drag = { y: e.clientY, h: sheet.getBoundingClientRect().height, moved: false };
+  sheet.classList.add("dragging");
+  e.currentTarget.setPointerCapture?.(e.pointerId);
+}
+function onDragMove(e) {
+  if (!drag) return;
+  const dy = e.clientY - drag.y;
+  if (Math.abs(dy) > 6) drag.moved = true;
+  const h = Math.max(90, Math.min(innerHeight - 60, drag.h - dy));
+  sheet.style.height = `${h}px`;
+}
+function onDragEnd(e) {
+  if (!drag) return;
+  const { moved, h: startH } = drag;
+  const h = sheet.getBoundingClientRect().height;
+  drag = null;
+  sheet.classList.remove("dragging");
+  sheet.style.height = "";
+  let next;
+  if (!moved) {
+    const i = STATES.indexOf(sheet.dataset.state);
+    next = STATES[i === 2 ? 1 : i + 1]; // tocco: espande a giro
+  } else {
+    // aggancio al più vicino, con preferenza per la direzione del gesto
+    const targets = { peek: sheetHeightFor("peek"), half: sheetHeightFor("half"), full: sheetHeightFor("full") };
+    const bias = (h - startH) * 0.35;
+    next = STATES.reduce((a, b) => (Math.abs(targets[b] - (h + bias)) < Math.abs(targets[a] - (h + bias)) ? b : a));
+  }
+  sheet.dataset.state = next;
+  setTimeout(() => map.invalidateSize(), 400);
+}
+function sheetHeightFor(stateName) {
+  if (stateName === "peek") return peekHeight();
+  if (stateName === "half") return innerHeight * 0.56;
+  return innerHeight - 70;
+}
+function peekHeight() {
+  const peek = $("#peek");
+  return 26 + (peek.hidden ? 96 : peek.offsetHeight + 10 + 4);
+}
+function updatePeekHeight() {
+  sheet.style.setProperty("--peek-h", `${peekHeight()}px`);
+}
+for (const el of [$("#grabber"), $("#peek")]) {
+  el.addEventListener("pointerdown", onDragStart);
+  el.addEventListener("pointermove", onDragMove);
+  el.addEventListener("pointerup", onDragEnd);
+  el.addEventListener("pointercancel", onDragEnd);
+}
+new ResizeObserver(updatePeekHeight).observe($("#peek"));
 
 /* ---------- Avvio ---------- */
 
@@ -867,6 +934,7 @@ load();
 setMode(state.mode);
 setMoto(state.moto);
 $("#area").value = state.area;
+$("#brand-area").textContent = state.area;
 $("#start").value = state.start;
 $("#end").value = state.end;
 $("#optimize").checked = state.optimize;

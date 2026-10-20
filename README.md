@@ -7,6 +7,8 @@ Carichi la foto di una lista di posti (scritta a mano, screenshot, volantino…)
 3. calcola l'ordine più veloce per visitarli e disegna il percorso,
 4. ti dà il link per navigare con Google Maps, l'export GPX e l'elenco copiabile.
 
+Si apre centrato su Palermo, con un giro di esempio in centro storico.
+
 Mezzi: **Auto**, **Moto** (profilo moto vero di Valhalla: "Veloce" oppure "Panoramico" senza autostrade e pedaggi), **Bici**, **A piedi**.
 
 Puoi anche scrivere o incollare i luoghi a mano, trascinare i segnaposto per correggerli, scegliere partenza (prima tappa o la tua posizione) e arrivo (dove conviene, ultima tappa, ritorno alla partenza).

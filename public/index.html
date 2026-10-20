@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Itinera</title>
   <meta name="description" content="Carica la foto dei posti dove devi andare: Itinera li trova sulla mappa e calcola il giro migliore in auto, moto, bici o a piedi.">
-  <meta name="theme-color" content="#f3f4f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -20,10 +20,12 @@
 </head>
 <body data-mode="auto">
   <div id="map" aria-label="Mappa del percorso"></div>
+  <div class="map-fade" aria-hidden="true"></div>
 
   <div class="brand" aria-hidden="true">
     <svg viewBox="0 0 32 32" width="22" height="22"><path d="M6 25c4-9 9 1 13-8s6-9 7-10" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><circle cx="6" cy="25" r="3.2" fill="currentColor"/><circle cx="26" cy="7" r="3.2" fill="var(--mode)"/></svg>
     <span>Itinera</span>
+    <em id="brand-area">Palermo</em>
   </div>
 
   <button class="locate" id="btn-locate" type="button" aria-label="Centra sulla mia posizione" title="La mia posizione">
@@ -32,11 +34,22 @@
 
   <aside class="sheet" id="sheet" data-state="half">
     <button class="grabber" id="grabber" type="button" aria-label="Espandi o riduci il pannello"><span></span></button>
+    <div class="peek" id="peek" hidden>
+      <span class="peek-icon" id="pk-icon" aria-hidden="true"></span>
+      <div class="peek-stats">
+        <b id="pk-time">–</b>
+        <span id="pk-meta">–</span>
+      </div>
+      <a class="peek-go" id="pk-go" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 11l18-8-8 18-2-8z" fill="currentColor"/></svg>
+        Naviga
+      </a>
+    </div>
 
     <div class="sheet-scroll">
       <!-- 1. Foto -->
       <section class="block" aria-labelledby="h-photo">
-        <h2 id="h-photo" class="eyebrow">Dove devi andare</h2>
+        <h2 id="h-photo" class="eyebrow"><i>1</i>Dove devi andare</h2>
         <label class="drop" id="drop" for="file">
           <input id="file" type="file" accept="image/*" hidden>
           <img id="thumb" alt="" hidden>
@@ -52,7 +65,7 @@
         <div class="row">
           <label class="field grow">
             <span>Zona</span>
-            <input id="area" type="text" placeholder="es. Roma, Milano centro…" autocomplete="off">
+            <input id="area" type="text" placeholder="es. Palermo, Mondello, Cefalù…" autocomplete="off">
           </label>
           <button class="ghost" id="btn-sample" type="button">Esempio</button>
         </div>
@@ -60,7 +73,7 @@
 
       <!-- 2. Mezzo -->
       <section class="block" aria-labelledby="h-mode">
-        <h2 id="h-mode" class="eyebrow">Come ti muovi</h2>
+        <h2 id="h-mode" class="eyebrow"><i>2</i>Come ti muovi</h2>
         <div class="modes" role="radiogroup" aria-labelledby="h-mode">
           <button type="button" role="radio" class="mode" data-mode="auto" aria-checked="true">
             <svg viewBox="0 0 24 24"><path d="M3 15v-3l2-5h14l2 5v3M3 15h18v3H3zM6.5 18v2M17.5 18v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7" cy="14.5" r="1.2" fill="currentColor"/><circle cx="17" cy="14.5" r="1.2" fill="currentColor"/></svg>
@@ -91,7 +104,7 @@
       <!-- 3. Tappe -->
       <section class="block" aria-labelledby="h-stops">
         <div class="block-head">
-          <h2 id="h-stops" class="eyebrow">Tappe <span class="count" id="count">0</span></h2>
+          <h2 id="h-stops" class="eyebrow"><i>3</i>Tappe <span class="count" id="count">0</span></h2>
           <button class="link" id="btn-clear" type="button">Svuota</button>
         </div>
         <ol class="stops" id="stops"></ol>
@@ -132,12 +145,7 @@
 
       <!-- 4. Risultato -->
       <section class="block result" id="result" aria-labelledby="h-result" hidden>
-        <h2 id="h-result" class="eyebrow">Il tuo giro</h2>
-        <div class="summary">
-          <div><b id="sum-dist">–</b><small>km</small></div>
-          <div><b id="sum-time">–</b><small id="sum-time-unit">tempo</small></div>
-          <div><b id="sum-stops">–</b><small>tappe</small></div>
-        </div>
+        <h2 id="h-result" class="eyebrow"><i>4</i>Il tuo giro, tappa per tappa</h2>
         <ol class="legs" id="legs"></ol>
         <div class="actions" id="gmaps-links"></div>
         <div class="actions">
