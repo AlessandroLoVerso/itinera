@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Itinera</title>
+  <meta name="description" content="Carica la foto dei posti dove devi andare: Itinera li trova sulla mappa e calcola il giro migliore in auto, moto, bici o a piedi.">
+  <meta name="theme-color" content="#f3f4f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1218" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body data-mode="auto">
+  <div id="map" aria-label="Mappa del percorso"></div>
+
+  <div class="brand" aria-hidden="true">
+    <svg viewBox="0 0 32 32" width="22" height="22"><path d="M6 25c4-9 9 1 13-8s6-9 7-10" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><circle cx="6" cy="25" r="3.2" fill="currentColor"/><circle cx="26" cy="7" r="3.2" fill="var(--mode)"/></svg>
+    <span>Itinera</span>
+  </div>
+
+  <button class="locate" id="btn-locate" type="button" aria-label="Centra sulla mia posizione" title="La mia posizione">
+    <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+  </button>
+
+  <aside class="sheet" id="sheet" data-state="half">
+    <button class="grabber" id="grabber" type="button" aria-label="Espandi o riduci il pannello"><span></span></button>
+
+    <div class="sheet-scroll">
+      <!-- 1. Foto -->
+      <section class="block" aria-labelledby="h-photo">
+        <h2 id="h-photo" class="eyebrow">Dove devi andare</h2>
+        <label class="drop" id="drop" for="file">
+          <input id="file" type="file" accept="image/*" hidden>
+          <img id="thumb" alt="" hidden>
+          <span class="drop-text" id="drop-text">
+            <strong>Carica o scatta una foto</strong>
+            <small>Lista scritta a mano, screenshot, volantino, appunti…</small>
+          </span>
+          <span class="drop-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 8h3l2-3h6l2 3h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          </span>
+        </label>
+        <div class="status" id="status" role="status" aria-live="polite" hidden></div>
+        <div class="row">
+          <label class="field grow">
+            <span>Zona</span>
+            <input id="area" type="text" placeholder="es. Roma, Milano centro…" autocomplete="off">
+          </label>
+          <button class="ghost" id="btn-sample" type="button">Esempio</button>
+        </div>
+      </section>
+
+      <!-- 2. Mezzo -->
+      <section class="block" aria-labelledby="h-mode">
+        <h2 id="h-mode" class="eyebrow">Come ti muovi</h2>
+        <div class="modes" role="radiogroup" aria-labelledby="h-mode">
+          <button type="button" role="radio" class="mode" data-mode="auto" aria-checked="true">
+            <svg viewBox="0 0 24 24"><path d="M3 15v-3l2-5h14l2 5v3M3 15h18v3H3zM6.5 18v2M17.5 18v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="7" cy="14.5" r="1.2" fill="currentColor"/><circle cx="17" cy="14.5" r="1.2" fill="currentColor"/></svg>
+            <span>Auto</span>
+          </button>
+          <button type="button" role="radio" class="mode" data-mode="moto" aria-checked="false">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="16" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="18.5" cy="16" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 16l4-6h5l4 6M13 6h3l1.5 4M9 10H6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Moto</span>
+          </button>
+          <button type="button" role="radio" class="mode" data-mode="bici" aria-checked="false">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="16" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="18.5" cy="16" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 16L9 9h7l2.5 7M9 9l3.5 7 3.5-7M8 6h3M15 6h2l-1 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Bici</span>
+          </button>
+          <button type="button" role="radio" class="mode" data-mode="piedi" aria-checked="false">
+            <svg viewBox="0 0 24 24"><circle cx="13" cy="4.5" r="2" fill="currentColor"/><path d="M10 21l2-6-2-3 1-4 3 3 3 1M12 15l3 6M11 8l-3 2-1 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>A piedi</span>
+          </button>
+        </div>
+        <div class="moto-opts" id="moto-opts" hidden>
+          <div class="seg" role="radiogroup" aria-label="Stile di guida in moto">
+            <button type="button" role="radio" data-moto="veloce" aria-checked="true">Veloce</button>
+            <button type="button" role="radio" data-moto="panoramico" aria-checked="false">Panoramico</button>
+          </div>
+          <p class="hint" id="moto-hint">Profilo moto: niente sterrati, tempi da moto e niente penalità del traffico cittadino.</p>
+        </div>
+      </section>
+
+      <!-- 3. Tappe -->
+      <section class="block" aria-labelledby="h-stops">
+        <div class="block-head">
+          <h2 id="h-stops" class="eyebrow">Tappe <span class="count" id="count">0</span></h2>
+          <button class="link" id="btn-clear" type="button">Svuota</button>
+        </div>
+        <ol class="stops" id="stops"></ol>
+        <form class="add" id="add-form" autocomplete="off">
+          <label class="sr-only" for="add-input">Aggiungi un luogo</label>
+          <input id="add-input" type="text" placeholder="Aggiungi un luogo o incolla una lista…">
+          <button type="submit" aria-label="Aggiungi">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </form>
+
+        <div class="opts">
+          <label class="field">
+            <span>Partenza</span>
+            <select id="start">
+              <option value="first">Dalla prima tappa</option>
+              <option value="here">Dalla mia posizione</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Arrivo</span>
+            <select id="end">
+              <option value="free">Dove conviene</option>
+              <option value="last">All'ultima tappa</option>
+              <option value="loop">Torno alla partenza</option>
+            </select>
+          </label>
+        </div>
+        <label class="check">
+          <input id="optimize" type="checkbox" checked>
+          <span>Ottimizza l'ordine delle tappe</span>
+        </label>
+        <button class="primary" id="btn-route" type="button">
+          <span>Calcola percorso</span>
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </section>
+
+      <!-- 4. Risultato -->
+      <section class="block result" id="result" aria-labelledby="h-result" hidden>
+        <h2 id="h-result" class="eyebrow">Il tuo giro</h2>
+        <div class="summary">
+          <div><b id="sum-dist">–</b><small>km</small></div>
+          <div><b id="sum-time">–</b><small id="sum-time-unit">tempo</small></div>
+          <div><b id="sum-stops">–</b><small>tappe</small></div>
+        </div>
+        <ol class="legs" id="legs"></ol>
+        <div class="actions" id="gmaps-links"></div>
+        <div class="actions">
+          <button class="ghost" id="btn-gpx" type="button">Esporta GPX</button>
+          <button class="ghost" id="btn-copy" type="button">Copia elenco</button>
+        </div>
+        <p class="hint" id="route-source"></p>
+      </section>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast" role="alert" hidden></div>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script src="/vendor/tesseract/tesseract.min.js" defer></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

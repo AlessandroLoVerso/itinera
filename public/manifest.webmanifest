@@ -1,0 +1,10 @@
+{
+  "name": "Itinera",
+  "short_name": "Itinera",
+  "description": "Da una foto di luoghi a un percorso ottimizzato.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141821",
+  "theme_color": "#141821",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
